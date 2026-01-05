@@ -12,5 +12,7 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error'],
     '@typescript-eslint/explicit-function-return-type': 'off',
     'prettier/prettier': 'error',
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
   },
 };
