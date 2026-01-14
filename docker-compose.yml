@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    # Le premier port est celui de la machine hôte, le second celui du conteneur
+    ports:
+      - "5432:5432"
+    # On monte un volume pour persister les données de la base de données
+    # Le chemin à gauche est celui de la machine hôte, celui de droite est celui du conteneur
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: ecommerce
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+# Nous créons un volume, c'est à dire un espace de stockage persisant qui se toruve en dehors du conteneur
+# Il est géré par Docker et permet de conserver les données même si le conteneur est supprimé
+volumes:
+  postgres_data:
