@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        # Cette action de GitHub permet de cloner le dépôt
+        # dans l'environnement de l'action.
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        # Cette action configure l'environnement Node.js
+        # avec la version spécifiée et active la mise en cache des dépendances npm.
+        #   Le cache permet d'accélérer les installations futures.
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Docker build
+        # Construire l'image Docker pour le backend e-commerce
+        run: docker build -t ecommerce-backend.
+
+      - name: LOGIN TO GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/ecommerce-backend:latest
