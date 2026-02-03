@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -15,14 +15,9 @@ jobs:
 
     steps:
       - name: Checkout
-        # Cette action de GitHub permet de cloner le dépôt
-        # dans l'environnement de l'action.
         uses: actions/checkout@v4
 
       - name: Setup Node
-        # Cette action configure l'environnement Node.js
-        # avec la version spécifiée et active la mise en cache des dépendances npm.
-        #   Le cache permet d'accélérer les installations futures.
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -36,10 +31,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Docker build
-        # Construire l'image Docker pour le backend e-commerce
-        run: docker build -t ecommerce-backend .
 
       - name: LOGIN TO GHCR
         uses: docker/login-action@v3
@@ -56,3 +47,68 @@ jobs:
           tags: |
             ghcr.io/stevenorcdev/ecommerce-backend-devops/ecommerce-backend:latest
             ghcr.io/stevenorcdev/ecommerce-backend-devops/ecommerce-backend:${{ github.sha }}
+
+  deploy-staging:
+    needs: build
+    runs-on: [self-hosted, staging]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Deploy application
+        run: |
+          set -e
+
+          # Définir le répertoire de déploiement
+          DEPLOY_DIR="/home/github-runner/ecommerce-staging"
+
+          # Aller dans le répertoire de déploiement
+          cd $DEPLOY_DIR
+
+          # Mettre à jour UNIQUEMENT l'image Docker dans le .env (sans toucher aux secrets)
+          sed -i "s|^API_IMAGE=.*|API_IMAGE=ghcr.io/stevenorcdev/ecommerce-backend-devops/ecommerce-backend:${{ github.sha }}|" .env
+
+          # Pull de la nouvelle image
+          docker pull "ghcr.io/stevenorcdev/ecommerce-backend-devops/ecommerce-backend:${{ github.sha }}"
+
+          # Arrêter les anciens conteneurs (SANS supprimer les volumes)
+          docker-compose down
+
+          # Redémarrer les services
+          docker-compose up -d
+
+          # Attendre que les services démarrent
+          echo "⏳ Waiting for services to start..."
+          sleep 15
+
+          # Nettoyer les anciennes images
+          docker image prune -af || true
+
+      - name: Health check
+        run: |
+          echo "🏥 Running health check..."
+
+          for i in {1..15}; do
+            if curl -fsS http://localhost:3000/health; then
+              echo ""
+              echo "✅ Deployment successful!"
+              exit 0
+            fi
+            echo "Attempt $i/15 failed, retrying in 3s..."
+            sleep 3
+          done
+
+          echo "❌ Health check failed"
+          echo ""
+          echo "📦 Container status:"
+          docker ps -a
+          echo ""
+          echo "📋 PostgreSQL logs:"
+          docker-compose -f /home/github-runner/ecommerce-staging/docker-compose.yml logs postgres --tail=30
+          echo ""
+          echo "📋 API logs:"
+          docker-compose -f /home/github-runner/ecommerce-staging/docker-compose.yml logs api --tail=50
+          exit 1
