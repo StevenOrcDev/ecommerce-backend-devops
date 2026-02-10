@@ -12,8 +12,16 @@ export class ProductsService {
   ) {}
 
   create(dto: CreateProductDto) {
-    const product = this.productsRepository.create(dto);
+    const { quantity } = dto;
+    const product = this.productsRepository.create({
+      ...dto,
+      quantity: quantity < 0 ? 0 : quantity || 0,
+    });
     return this.productsRepository.save(product);
+  }
+
+  patchProduct(id: string, dto: Partial<CreateProductDto>) {
+    return this.productsRepository.update(id, dto);
   }
 
   findAll() {
