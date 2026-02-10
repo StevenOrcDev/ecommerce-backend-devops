@@ -30,7 +30,7 @@ export class ProductsService {
 
   async findOne(id: string) {
     const product = await this.productsRepository.findOne({ where: { id } });
-    if (!product) throw new NotFoundException('Product not found');
+    if (!product) throw new NotFoundException('Product not found.');
     return product;
   }
 
