@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/createUser.dto';
+import { GetUserPasswordResponse } from './models/GetUserPasswordResponse';
 
 @Injectable()
 export class UsersService {
@@ -19,20 +20,24 @@ export class UsersService {
     return newUser;
   }
 
-  async getUserPassword(id: string) {
+  async getUserPassword(id: string): Promise<GetUserPasswordResponse> {
     const user = await this.usersRepository.findOneBy({ id });
 
     if (!user) throw new NotFoundException('User not found');
 
-    return user?.password;
+    return { password: user.password };
   }
 
   async findAll() {
     const users = await this.usersRepository.find();
 
-    return users?.forEach((user) => {
+    if (!users) throw new NotFoundException('No users found');
+
+    users?.forEach((user) => {
       delete user?.password;
     });
+
+    return users;
   }
 
   async remove(id: string) {
@@ -47,6 +52,21 @@ export class UsersService {
     const user = await this.usersRepository.findOneBy({ id });
 
     if (!user) throw new NotFoundException('User not found');
+
+    delete user.password;
+    return user;
+  }
+
+  async resetPassword(id: string, newPassword: string, oldPassword?: string) {
+    const user = await this.usersRepository.findOneBy({ id });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (oldPassword && user.password !== oldPassword) {
+      throw new NotFoundException('Old password is incorrect');
+    }
+
+    user.password = newPassword;
+    await this.usersRepository.save(user);
 
     delete user.password;
     return user;
