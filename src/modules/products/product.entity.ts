@@ -12,6 +12,9 @@ export class Product {
   @Column('int')
   price: number;
 
+  @Column('int')
+  quantity: number;
+
   @CreateDateColumn()
   createdAt: Date;
 
