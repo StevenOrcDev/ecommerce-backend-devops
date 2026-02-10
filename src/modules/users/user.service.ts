@@ -11,27 +11,44 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
-  create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto) {
     const user = this.usersRepository.create(dto);
-    return this.usersRepository.save(user);
+    const newUser = await this.usersRepository.save(user);
+
+    delete newUser.password;
+    return newUser;
   }
 
-  findAll() {
-    return this.usersRepository.find();
-  }
+  async getUserPassword(id: string) {
+    const user = await this.usersRepository.findOneBy({ id });
 
-  async findOne(id: string) {
-    const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
-    return user;
+
+    return user?.password;
+  }
+
+  async findAll() {
+    const users = await this.usersRepository.find();
+
+    return users?.forEach((user) => {
+      delete user?.password;
+    });
   }
 
   async remove(id: string) {
-    const user = await this.findOne(id);
-    return this.usersRepository.remove(user);
+    const user = await this.usersRepository.findOneBy({ id });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    await this.usersRepository.remove(user);
   }
 
   async findoneById(id: string) {
-    return this.usersRepository.findOne({ where: { id } });
+    const user = await this.usersRepository.findOneBy({ id });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    delete user.password;
+    return user;
   }
 }
