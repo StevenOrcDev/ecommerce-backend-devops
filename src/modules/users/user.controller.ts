@@ -18,11 +18,16 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+    return this.usersService.findoneById(id);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
+  }
+
+  @Get(':id/password')
+  getUserPassword(@Param('id') id: string) {
+    return this.usersService.getUserPassword(id);
   }
 }
