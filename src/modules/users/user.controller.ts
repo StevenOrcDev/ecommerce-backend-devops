@@ -1,6 +1,9 @@
 import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
 import { UsersService } from './user.service';
 import { CreateUserDto } from './dto/createUser.dto';
+import { UserIdParamsDto } from './dto/userIdParams.dto';
+import { PostNewPasswordDto } from './dto/postNewPassword.dto';
+import type { GetUserPasswordResponse } from './models/GetUserPasswordResponse';
 
 @Controller('users')
 export class UsersController {
@@ -17,17 +20,28 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param() params: UserIdParamsDto) {
+    const { id } = params;
     return this.usersService.findoneById(id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param() params: UserIdParamsDto) {
+    const { id } = params;
     return this.usersService.remove(id);
   }
 
   @Get(':id/password')
-  getUserPassword(@Param('id') id: string) {
+  async getUserPassword(@Param() params: UserIdParamsDto): Promise<GetUserPasswordResponse> {
+    const { id } = params;
     return this.usersService.getUserPassword(id);
+  }
+
+  @Post(':id/reset-password')
+  resetPassword(@Param() params: UserIdParamsDto, @Body() body: PostNewPasswordDto) {
+    const { id } = params;
+    const { newPassword } = body;
+
+    return this.usersService.resetPassword(id, newPassword);
   }
 }
